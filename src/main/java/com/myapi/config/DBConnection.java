@@ -7,14 +7,14 @@ import java.sql.SQLException;
 public class DBConnection {
     
     public static Connection getConnection() throws SQLException, ClassNotFoundException {
+        // Load PostgreSQL driver
         Class.forName("org.postgresql.Driver");
         
         // Get DATABASE_URL from Render environment
         String dbUrl = System.getenv("DATABASE_URL");
         
         if (dbUrl == null || dbUrl.isEmpty()) {
-            // Fallback for local development with PostgreSQL
-            dbUrl = "jdbc:postgresql://localhost:5432/event_api_db?ssl=false";
+            throw new SQLException("DATABASE_URL environment variable is not set");
         }
         
         System.out.println("Connecting to PostgreSQL database...");

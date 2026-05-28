@@ -25,7 +25,7 @@
             <scope>provided</scope>
         </dependency>
         
-        <!-- PostgreSQL Driver (NOT MySQL) -->
+        <!-- PostgreSQL Driver - ADD THIS -->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
