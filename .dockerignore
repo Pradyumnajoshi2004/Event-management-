@@ -1,0 +1,5 @@
+# Ignore everything except what we need
+*
+!pom.xml
+!src/
+!Dockerfile
