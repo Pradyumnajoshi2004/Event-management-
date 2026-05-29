@@ -7,31 +7,35 @@ import java.sql.SQLException;
 public class DBConnection {
     
     public static Connection getConnection() throws SQLException, ClassNotFoundException {
+        // Load PostgreSQL driver
         Class.forName("org.postgresql.Driver");
         
+        // Get DATABASE_URL from environment
         String dbUrl = System.getenv("DATABASE_URL");
         
         if (dbUrl == null || dbUrl.isEmpty()) {
             throw new SQLException("DATABASE_URL environment variable is not set");
         }
         
-        // Clean up the URL if it already has jdbc: prefix
+        // Add jdbc: prefix if not present
         if (!dbUrl.startsWith("jdbc:")) {
             dbUrl = "jdbc:" + dbUrl;
         }
         
-        // Remove any duplicate host/port patterns if present
-        // This handles the case where the URL has been concatenated multiple times
-        if (dbUrl.contains(".render.com:5432/") && dbUrl.indexOf(".render.com:5432/") != dbUrl.lastIndexOf(".render.com:5432/")) {
-            // Get the last occurrence of the database name
-            String lastPart = dbUrl.substring(dbUrl.lastIndexOf("/event_db"));
-            String firstPart = dbUrl.substring(0, dbUrl.indexOf(".render.com:5432/") + ".render.com:5432/".length());
-            dbUrl = firstPart + lastPart;
+        // Add SSL requirement for external connection
+        if (!dbUrl.contains("sslmode=")) {
+            dbUrl += "?sslmode=require";
         }
         
         System.out.println("Connecting to PostgreSQL database...");
-        System.out.println("URL: " + dbUrl); // Debug line - remove in production
         
-        return DriverManager.getConnection(dbUrl);
+        try {
+            Connection conn = DriverManager.getConnection(dbUrl);
+            System.out.println("Database connected successfully!");
+            return conn;
+        } catch (SQLException e) {
+            System.err.println("Failed to connect to database: " + e.getMessage());
+            throw e;
+        }
     }
 }
