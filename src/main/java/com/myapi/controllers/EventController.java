@@ -87,11 +87,15 @@ public class EventController extends HttpServlet {
                 event.addProperty("eventName", rs.getString("event_name"));
                 event.addProperty("eventDescription", rs.getString("event_description"));
                 event.addProperty("eventVenue", rs.getString("event_venue"));
-                event.addProperty("date", rs.getString("date"));
+                // Handle date properly
+                Date date = rs.getDate("date");
+                event.addProperty("date", date != null ? date.toString() : null);
                 event.addProperty("userId", rs.getInt("user_id"));
                 event.addProperty("userName", rs.getString("user_name"));
                 event.addProperty("userEmail", rs.getString("user_email"));
-                event.addProperty("created_at", rs.getString("created_at"));
+                // Handle created_at timestamp
+                java.sql.Timestamp createdAt = rs.getTimestamp("created_at");
+                event.addProperty("created_at", createdAt != null ? createdAt.toString() : null);
                 events.add(event);
             }
             
@@ -132,11 +136,15 @@ public class EventController extends HttpServlet {
                 event.addProperty("eventName", rs.getString("event_name"));
                 event.addProperty("eventDescription", rs.getString("event_description"));
                 event.addProperty("eventVenue", rs.getString("event_venue"));
-                event.addProperty("date", rs.getString("date"));
+                // Handle date properly
+                Date date = rs.getDate("date");
+                event.addProperty("date", date != null ? date.toString() : null);
                 event.addProperty("userId", rs.getInt("user_id"));
                 event.addProperty("userName", rs.getString("user_name"));
                 event.addProperty("userEmail", rs.getString("user_email"));
-                event.addProperty("created_at", rs.getString("created_at"));
+                // Handle created_at timestamp
+                java.sql.Timestamp createdAt = rs.getTimestamp("created_at");
+                event.addProperty("created_at", createdAt != null ? createdAt.toString() : null);
                 
                 JsonObject responseJson = new JsonObject();
                 responseJson.addProperty("errors", false);
@@ -192,11 +200,25 @@ public class EventController extends HttpServlet {
                 return;
             }
             
+            // Validate date format
+            Date eventDate;
+            try {
+                eventDate = Date.valueOf(dateStr);
+            } catch (IllegalArgumentException e) {
+                response.setStatus(400);
+                JsonObject error = new JsonObject();
+                error.addProperty("errors", true);
+                error.addProperty("message", "Invalid date format. Expected yyyy-MM-dd (e.g., 2024-12-25)");
+                out.print(gson.toJson(error));
+                return;
+            }
+            
             try (Connection conn = DBConnection.getConnection()) {
+                // Check for duplicate event - FIXED: using Date parameter instead of String
                 String checkSql = "SELECT id FROM events WHERE event_name = ? AND date = ?";
                 PreparedStatement checkStmt = conn.prepareStatement(checkSql);
                 checkStmt.setString(1, eventName);
-                checkStmt.setString(2, dateStr);
+                checkStmt.setDate(2, eventDate);  // Using setDate instead of setString
                 ResultSet rs = checkStmt.executeQuery();
                 
                 if (rs.next()) {
@@ -214,7 +236,7 @@ public class EventController extends HttpServlet {
                 pstmt.setString(1, eventName);
                 pstmt.setString(2, eventDescription);
                 pstmt.setString(3, eventVenue);
-                pstmt.setDate(4, Date.valueOf(dateStr));
+                pstmt.setDate(4, eventDate);
                 pstmt.setInt(5, userId);
                 
                 int affected = pstmt.executeUpdate();
@@ -307,6 +329,21 @@ public class EventController extends HttpServlet {
                     return;
                 }
                 
+                // Validate date if provided
+                Date eventDate = null;
+                if (dateStr != null && !dateStr.isEmpty()) {
+                    try {
+                        eventDate = Date.valueOf(dateStr);
+                    } catch (IllegalArgumentException e) {
+                        response.setStatus(400);
+                        JsonObject error = new JsonObject();
+                        error.addProperty("errors", true);
+                        error.addProperty("message", "Invalid date format. Expected yyyy-MM-dd (e.g., 2024-12-25)");
+                        out.print(gson.toJson(error));
+                        return;
+                    }
+                }
+                
                 StringBuilder sql = new StringBuilder("UPDATE events SET ");
                 boolean hasUpdate = false;
                 
@@ -324,7 +361,7 @@ public class EventController extends HttpServlet {
                     sql.append("event_venue = ?");
                     hasUpdate = true;
                 }
-                if (dateStr != null && !dateStr.isEmpty()) {
+                if (eventDate != null) {
                     if (hasUpdate) sql.append(", ");
                     sql.append("date = ?");
                     hasUpdate = true;
@@ -352,8 +389,8 @@ public class EventController extends HttpServlet {
                 if (eventVenue != null && !eventVenue.isEmpty()) {
                     pstmt.setString(index++, eventVenue);
                 }
-                if (dateStr != null && !dateStr.isEmpty()) {
-                    pstmt.setDate(index++, Date.valueOf(dateStr));
+                if (eventDate != null) {
+                    pstmt.setDate(index++, eventDate);  // Using setDate for date column
                 }
                 pstmt.setInt(index, eventId);
                 
